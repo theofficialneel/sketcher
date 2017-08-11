@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sketcher</title>
+    <link href="https://fonts.googleapis.com/css?family=Permanent+Marker" rel="stylesheet">
+    <style type="text/css">
+        body {
+            margin: 0;
+            user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        #canvas1 {
+            cursor: crosshair;
+            display: block;
+        }
+        #settings {
+            width: 100%;
+            height: 30px;
+            padding: 10px;
+            position: fixed;
+            font-family: 'Permanent Marker', cursive;
+            background-color: black;
+            color: white;
+        }
+        #rad {
+            float: right;
+            margin-right: 20px;
+        }
+        #col {
+            float: right;
+            width: 350px;
+            margin-left: 10px;
+        }
+        .colorinput {
+            width: 25px;
+        }
+        #colorpicker{
+            float: right;
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        #activecolor {
+            float: right;
+            width: 25px;
+            height: 25px;
+            border-radius: 15px;
+            border: 2px solid white;
+            background-color: black;
+        }
+        .settingbtn {
+            background-color: #888;
+            float: left;
+            text-align: center;
+            width: 50px;
+            height: 25px;
+            padding: 2px;
+            border-radius: 10px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .modes{
+            background-color: #666;
+            float: right;
+            text-align: center;
+            width: 30px;
+            height: 25px;
+            padding: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        #savelink{
+            text-decoration: none;
+        }
+        #fileup{
+            width: 200px;
+            padding: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="settings">
+        <div id="rad">
+            Brush size : <span id="radiusValue">10.0</span>
+            <button id="radiusDecrease">-</button>
+            <button id="radiusIncrease">+</button>
+        </div>
+        <div id="colorpicker"><input id="colopick" type="color" name="color"></div>
+        <div id="col">
+            Color Picker -
+            <button id="changecolor">+</button>
+            <span style="color: red;">R :</span>
+            <input type="text" id="red" class="colorinput" value="0">
+            <span style="color: green;">G :</span>
+            <input type="text" id="green" class="colorinput" value="0">
+            <span style="color: blue;">B :</span>
+            <input type="text" id="blue" class="colorinput" value="0">
+        </div>
+        <div id="activecolor"></div>
+        <div id="brush" class="modes">B</div>
+        <div id="hline" class="modes">__</div>
+        <div id="vline" class="modes">|</div>
+        <div id="rects" class="modes">[]</div>
+        <div id="undo" class="settingbtn">Undo</div>
+        <div id="clear" class="settingbtn">Clear</div>
+        <div id="save" class="settingbtn"><a id="savelink" download="xyz.png">Save</a></div>
+        <div id="fileup" class="settingbtn"><input type="file" name="file"></div>
+    </div>
+    <canvas id="canvas1"></canvas>
+    <script type="text/javascript">
+        var canvas = document.getElementById("canvas1");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        var context = canvas.getContext('2d');
+        window.addEventListener("load",drawIntro);
+        function drawIntro() {
+            context.font = "40px Permanent Marker";
+            context.fillText("Neel's", 400, 250);
+            context.font = "120px Permanent Marker";
+            context.fillText("Sketcher", 400, 350);
+            undostore();
+        }
+        var fileinput = document.getElementById("fileup");
+        fileinput.addEventListener("change",changebg);
+        function changebg(event){
+            var tmppath = URL.createObjectURL(event.target.files[0]);
+            console.log(tmppath);
+            var img = new Image();
+            img.src = tmppath;
+            img.onload = function(){
+                context.drawImage(img,0,0,canvas.width,canvas.height);
+            }
+        }
+
+        //undo
+        var megaImageHolder = [];
+        var index=-1,m=0;  //m is the undo clicker counter
+        function undostore(){
+             var x = canvas.toDataURL();
+             ++index;
+             megaImageHolder[index]=x;
+        }
+        var undobutton = document.getElementById("undo");
+        undobutton.addEventListener("click",undoer);
+        function undoer(){
+            var image = new Image();
+            image.src = megaImageHolder[megaImageHolder.length-2-m];
+            m+=2;
+            image.onload = function(){
+                context.clearRect(0,0,canvas.width,canvas.height);
+                context.drawImage(image,0,0);
+                undostore();
+            };   
+            
+        }
+
+        //saving
+        var saveButton = document.getElementById("savelink");
+        saveButton.addEventListener("click", saveImage);
+        function saveImage() {
+            var data = canvas.toDataURL(); 
+            this.href = data;           
+            //window.open(data, '_blank', 'location=0');
+        }
+
+        //radius settings
+        var radius = 10;
+        context.lineWidth = radius * 2;
+
+        function radiusIncreaseFunc() {
+            if (radius < 50) {
+                radius = radius + 0.5;
+                context.lineWidth = radius * 2;
+                if (radius % 1 != 0)
+                    radiusValue.textContent = radius;
+                else
+                    radiusValue.textContent = radius + ".0";
+            }
+        }
+
+        function radiusDecreaseFunc() {
+            if (radius > 1) {
+                radius = radius - 0.5;
+                context.lineWidth = radius * 2;
+                if (radius % 1 != 0)
+                    radiusValue.textContent = radius;
+                else
+                    radiusValue.textContent = radius + ".0";
+            }
+        }
+        var radiusValue = document.getElementById("radiusValue");
+        var radiusIncreaseButton = document.getElementById("radiusIncrease");
+        var radiusDecreaseButton = document.getElementById("radiusDecrease");
+        radiusIncreaseButton.addEventListener("click", radiusIncreaseFunc);
+        radiusDecreaseButton.addEventListener("click", radiusDecreaseFunc);
+
+        //color settings
+        var changecolor = document.getElementById("changecolor");
+        changecolor.addEventListener("click", changecolor_function);
+        var rgbclr = {
+            r: 0,
+            g: 0,
+            b: 0
+        }
+
+        function changecolor_function() {
+                rgbclr.r = document.getElementById("red").value;
+                rgbclr.g = document.getElementById("green").value;
+                rgbclr.b = document.getElementById("blue").value;
+                var colour = "rgb(" + rgbclr.r + "," + rgbclr.g + "," + rgbclr.b + ")";
+                document.getElementById("activecolor").style.background = colour;
+                context.fillStyle = colour;
+                context.strokeStyle = colour;
+            }
+        //clear settings
+        var clearall = document.getElementById("clear");
+        clearall.addEventListener("click", clearall_func);
+
+        function clearall_func() {
+            undostore();
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        //mode settings
+        var mode = 1;
+        var brush = document.getElementById("brush");
+        var hline = document.getElementById("hline");
+        var vline = document.getElementById("vline");
+        brush.addEventListener("click",function(){mode=1;});
+        hline.addEventListener("click",function(){mode=2;});
+        vline.addEventListener("click",function(){mode=3;});
+
+        //movement settings
+        var drag = false;
+        var mousecood = {
+            x : 0,
+            y : 0,
+        }
+
+        function clickDown(e) {
+            drag = true;
+            if(mode==2){
+                mousecood.y = e.offsetY;
+            }else if(mode==3){
+                mousecood.x = e.offsetX;
+            }
+            drawPoint(e);
+        }
+
+        function clickUp() {
+            drag = false;
+            context.beginPath();
+            m=0;
+            undostore();
+        }
+
+        function drawPoint(e) {
+            if (drag) {
+                if(mode==1){
+                    mousecood.x = e.offsetX;
+                    mousecood.y = e.offsetY;
+                }else if(mode==2){
+                    mousecood.x = e.offsetX;
+                }else if(mode==3){
+                    mousecood.y = e.offsetY;
+                }
+                context.lineTo(mousecood.x, mousecood.y);
+                context.stroke();
+                context.beginPath();
+                context.arc(mousecood.x, mousecood.y, radius, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.moveTo(mousecood.x, mousecood.y);
+            }
+        }
+
+        //brush events
+        canvas.addEventListener("mousedown", clickDown);
+        canvas.addEventListener("mousemove", drawPoint);
+        canvas.addEventListener("mouseup", clickUp);
+    </script>
+</body>
+
+</html>
